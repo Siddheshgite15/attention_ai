@@ -1,0 +1,775 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Attention AI - Real-time Monitoring</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+            overflow: hidden;
+        }
+
+        header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+
+        h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+
+        .subtitle {
+            font-size: 1em;
+            opacity: 0.9;
+        }
+
+        .content {
+            padding: 30px;
+        }
+
+        .section {
+            margin-bottom: 30px;
+        }
+
+        .section-title {
+            font-size: 1.3em;
+            color: #333;
+            margin-bottom: 15px;
+            border-bottom: 2px solid #667eea;
+            padding-bottom: 10px;
+        }
+
+        /* Controls Section */
+        .controls {
+            display: flex;
+            gap: 15px;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+
+        button {
+            padding: 12px 25px;
+            font-size: 1em;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-weight: 600;
+        }
+
+        .btn-start {
+            background: #4CAF50;
+            color: white;
+        }
+
+        .btn-start:hover:not(:disabled) {
+            background: #45a049;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(76, 175, 80, 0.4);
+        }
+
+        .btn-stop {
+            background: #f44336;
+            color: white;
+        }
+
+        .btn-stop:hover:not(:disabled) {
+            background: #da190b;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(244, 67, 54, 0.4);
+        }
+
+        button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .status {
+            padding: 10px 20px;
+            border-radius: 8px;
+            font-weight: 600;
+            display: inline-block;
+        }
+
+        .status.inactive {
+            background: #f0f0f0;
+            color: #666;
+        }
+
+        .status.active {
+            background: #4CAF50;
+            color: white;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.7; }
+        }
+
+        /* Video Section */
+        .video-container {
+            position: relative;
+            width: 100%;
+            max-width: 500px;
+            margin: 0 auto;
+            background: #000;
+            border-radius: 10px;
+            overflow: hidden;
+        }
+
+        #videoElement {
+            width: 100%;
+            display: block;
+        }
+
+        .camera-note {
+            font-size: 0.9em;
+            color: #999;
+            margin-top: 10px;
+            text-align: center;
+        }
+
+        /* Score Display */
+        .score-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            border-radius: 10px;
+            text-align: center;
+            margin: 20px 0;
+        }
+
+        .score-label {
+            font-size: 1.1em;
+            opacity: 0.9;
+            margin-bottom: 10px;
+        }
+
+        .score-value {
+            font-size: 4em;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+
+        .score-percent {
+            font-size: 1.5em;
+            opacity: 0.9;
+        }
+
+        /* Stats */
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 15px;
+            margin-top: 15px;
+        }
+
+        .stat-item {
+            background: #f5f5f5;
+            padding: 15px;
+            border-radius: 8px;
+            text-align: center;
+            border-left: 4px solid #667eea;
+        }
+
+        .stat-label {
+            font-size: 0.9em;
+            color: #666;
+            margin-bottom: 5px;
+        }
+
+        .stat-value {
+            font-size: 1.5em;
+            font-weight: bold;
+            color: #667eea;
+        }
+
+        /* Graph */
+        .chart-container {
+            position: relative;
+            width: 100%;
+            height: 400px;
+            margin-top: 20px;
+        }
+
+        #attentionChart {
+            max-height: 400px;
+        }
+
+        /* Messages */
+        .message {
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 15px;
+            display: none;
+        }
+
+        .message.show {
+            display: block;
+        }
+
+        .message.error {
+            background: #ffebee;
+            color: #c62828;
+            border-left: 4px solid #f44336;
+        }
+
+        .message.success {
+            background: #e8f5e9;
+            color: #2e7d32;
+            border-left: 4px solid #4CAF50;
+        }
+
+        .message.info {
+            background: #e3f2fd;
+            color: #1565c0;
+            border-left: 4px solid #2196F3;
+        }
+
+        /* Results Display */
+        .results {
+            background: #f5f5f5;
+            padding: 20px;
+            border-radius: 10px;
+            margin-top: 20px;
+            display: none;
+        }
+
+        .results.show {
+            display: block;
+            animation: slideIn 0.3s ease;
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(-10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .result-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 10px 0;
+            border-bottom: 1px solid #ddd;
+        }
+
+        .result-item:last-child {
+            border-bottom: none;
+        }
+
+        .result-label {
+            font-weight: 600;
+            color: #333;
+        }
+
+        .result-value {
+            color: #667eea;
+            font-weight: 600;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            header {
+                padding: 20px;
+            }
+
+            h1 {
+                font-size: 1.8em;
+            }
+
+            .content {
+                padding: 15px;
+            }
+
+            .score-value {
+                font-size: 3em;
+            }
+
+            .controls {
+                flex-direction: column;
+            }
+
+            button {
+                width: 100%;
+            }
+
+            .stats {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+
+        /* Loading spinner */
+        .spinner {
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #667eea;
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            animation: spin 1s linear infinite;
+            display: inline-block;
+            margin-right: 10px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .loading-text {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>👁️ Attention AI</h1>
+            <p class="subtitle">Real-time Attention Monitoring System</p>
+        </header>
+
+        <div class="content">
+            <!-- Messages -->
+            <div id="message" class="message"></div>
+
+            <!-- Controls Section -->
+            <div class="section">
+                <div class="section-title">Controls</div>
+                <div class="controls">
+                    <button class="btn-start" id="startBtn" onclick="startSession()">📹 Start Monitoring</button>
+                    <button class="btn-stop" id="stopBtn" onclick="stopSession()" disabled>⏹️ Stop Monitoring</button>
+                    <span class="status" id="status" class="inactive">● Ready</span>
+                </div>
+            </div>
+
+            <!-- Video Section -->
+            <div class="section">
+                <div class="section-title">Camera Feed</div>
+                <div class="video-container">
+                    <video id="videoElement" autoplay playsinline muted></video>
+                </div>
+                <p class="camera-note">Your camera will start when you click "Start Monitoring"</p>
+            </div>
+
+            <!-- Real-time Score -->
+            <div class="section">
+                <div class="section-title">Real-time Score</div>
+                <div class="score-card">
+                    <div class="score-label">Current Attention Score</div>
+                    <div class="score-value" id="scoreValue">--</div>
+                    <div class="score-percent">%</div>
+                </div>
+                <div class="stats">
+                    <div class="stat-item">
+                        <div class="stat-label">Frames Processed</div>
+                        <div class="stat-value" id="framesCount">0</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-label">Elapsed Time</div>
+                        <div class="stat-value" id="elapsedTime">0s</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-label">Status</div>
+                        <div class="stat-value" id="currentStatus">--</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Graph -->
+            <div class="section">
+                <div class="section-title">Attention Graph</div>
+                <div class="chart-container">
+                    <canvas id="attentionChart"></canvas>
+                </div>
+            </div>
+
+            <!-- Final Results -->
+            <div class="section">
+                <div id="results" class="results">
+                    <h3 style="margin-bottom: 15px; color: #333;">📊 Session Summary</h3>
+                    <div class="result-item">
+                        <span class="result-label">Final Attention Score:</span>
+                        <span class="result-value" id="finalScore">--</span>
+                    </div>
+                    <div class="result-item">
+                        <span class="result-label">Total Duration:</span>
+                        <span class="result-value" id="totalTime">--</span>
+                    </div>
+                    <div class="result-item">
+                        <span class="result-label">Total Frames:</span>
+                        <span class="result-value" id="totalFrames">--</span>
+                    </div>
+                    <div class="result-item">
+                        <span class="result-label">Distracted Periods:</span>
+                        <span class="result-value" id="distractedPeriods">--</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ========== Configuration ==========
+        const API_BASE = 'http://localhost:5000/api/v1'; // Change for Render deployment
+        // For Render: const API_BASE = 'https://your-app.onrender.com/api/v1';
+
+        // ========== State Management ==========
+        let sessionId = null;
+        let snapshotInterval = null;
+        let videoStream = null;
+        let canvas = null;
+        let ctx = null;
+        let chartInstance = null;
+        let isMonitoring = false;
+        let sessionData = {
+            totalFrames: 0,
+            currentScore: 0
+        };
+
+        // ========== Message Display ==========
+        function showMessage(text, type = 'info') {
+            const messageEl = document.getElementById('message');
+            messageEl.textContent = text;
+            messageEl.className = `message show ${type}`;
+            setTimeout(() => {
+                messageEl.classList.remove('show');
+            }, 5000);
+        }
+
+        // ========== Start Session ==========
+        async function startSession() {
+            try {
+                // Create session
+                const response = await fetch(`${API_BASE}/session/start`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ timeout: 300 })
+                });
+
+                if (!response.ok) {
+                    throw new Error('Failed to start session');
+                }
+
+                const data = await response.json();
+                sessionId = data.session_id;
+                isMonitoring = true;
+
+                console.log('✓ Session started:', sessionId);
+                showMessage(`✓ Session started: ${sessionId}`, 'success');
+
+                // Update UI
+                document.getElementById('startBtn').disabled = true;
+                document.getElementById('stopBtn').disabled = false;
+                document.getElementById('status').textContent = '● Monitoring';
+                document.getElementById('status').className = 'status active';
+                document.getElementById('results').classList.remove('show');
+
+                // Start video capture
+                startVideoCapture();
+
+            } catch (error) {
+                console.error('Error starting session:', error);
+                showMessage(`✗ Error: ${error.message}`, 'error');
+            }
+        }
+
+        // ========== Start Video Capture ==========
+        function startVideoCapture() {
+            navigator.mediaDevices.getUserMedia({ 
+                video: { 
+                    width: { ideal: 640 },
+                    height: { ideal: 480 }
+                } 
+            })
+            .then(stream => {
+                videoStream = stream;
+                const videoElement = document.getElementById('videoElement');
+                videoElement.srcObject = stream;
+
+                // Create off-screen canvas for snapshots
+                canvas = document.createElement('canvas');
+                ctx = canvas.getContext('2d');
+
+                // Wait for video to load then start sending snapshots
+                videoElement.onloadedmetadata = () => {
+                    canvas.width = videoElement.videoWidth;
+                    canvas.height = videoElement.videoHeight;
+                    sendSnapshots();
+                };
+            })
+            .catch(error => {
+                console.error('Camera access error:', error);
+                showMessage('✗ Camera access denied. Please allow camera access.', 'error');
+                isMonitoring = false;
+                document.getElementById('startBtn').disabled = false;
+                document.getElementById('stopBtn').disabled = true;
+            });
+        }
+
+        // ========== Send Snapshots ==========
+        function sendSnapshots() {
+            if (!isMonitoring || !sessionId) return;
+
+            snapshotInterval = setInterval(async () => {
+                if (!isMonitoring) {
+                    clearInterval(snapshotInterval);
+                    return;
+                }
+
+                try {
+                    // Capture frame
+                    const videoElement = document.getElementById('videoElement');
+                    ctx.drawImage(videoElement, 0, 0);
+
+                    // Convert to blob
+                    canvas.toBlob(async (blob) => {
+                        const formData = new FormData();
+                        formData.append('image', blob, 'snapshot.jpg');
+
+                        // Send to API
+                        const response = await fetch(`${API_BASE}/session/${sessionId}/snapshot`, {
+                            method: 'POST',
+                            body: formData
+                        });
+
+                        if (!response.ok) {
+                            if (response.status === 404) {
+                                // Session expired
+                                isMonitoring = false;
+                                showMessage('Session expired!', 'error');
+                                stopSession();
+                                return;
+                            }
+                            throw new Error('Failed to process snapshot');
+                        }
+
+                        const data = await response.json();
+
+                        // Update UI with real-time data
+                        updateRealtimeScore(data);
+
+                    }, 'image/jpeg', 0.8);
+
+                } catch (error) {
+                    console.error('Error sending snapshot:', error);
+                }
+            }, 300); // Send every 300ms (~3-4 frames per second)
+        }
+
+        // ========== Update Real-time Score ==========
+        function updateRealtimeScore(data) {
+            sessionData.totalFrames = data.frames_processed;
+            sessionData.currentScore = data.attention_score;
+
+            // Update score display
+            document.getElementById('scoreValue').textContent = Math.round(data.attention_score);
+            document.getElementById('framesCount').textContent = data.frames_processed;
+            document.getElementById('elapsedTime').textContent = Math.round(data.elapsed_time) + 's';
+            document.getElementById('currentStatus').textContent = data.current_status;
+
+            // Update status color based on attention
+            const currentStatusEl = document.getElementById('currentStatus');
+            if (data.current_status === 'ATTENTIVE') {
+                currentStatusEl.style.color = '#4CAF50';
+            } else {
+                currentStatusEl.style.color = '#f44336';
+            }
+        }
+
+        // ========== Get Session Summary ==========
+        async function getSessionSummary() {
+            try {
+                const response = await fetch(`${API_BASE}/session/${sessionId}/summary`);
+                if (!response.ok) {
+                    throw new Error('Failed to get summary');
+                }
+                return await response.json();
+            } catch (error) {
+                console.error('Error getting summary:', error);
+                showMessage(`✗ Error: ${error.message}`, 'error');
+                return null;
+            }
+        }
+
+        // ========== Stop Session ==========
+        async function stopSession() {
+            if (!sessionId || !isMonitoring) return;
+
+            try {
+                isMonitoring = false;
+                clearInterval(snapshotInterval);
+
+                // Stop video stream
+                if (videoStream) {
+                    videoStream.getTracks().forEach(track => track.stop());
+                }
+
+                // Get final summary
+                const summary = await getSessionSummary();
+
+                // End session on server
+                const response = await fetch(`${API_BASE}/session/${sessionId}/end`, {
+                    method: 'POST'
+                });
+
+                if (!response.ok) {
+                    throw new Error('Failed to end session');
+                }
+
+                // Display results
+                if (summary) {
+                    displayResults(summary);
+                }
+
+                showMessage('✓ Session ended', 'success');
+
+                // Update UI
+                document.getElementById('startBtn').disabled = false;
+                document.getElementById('stopBtn').disabled = true;
+                document.getElementById('status').textContent = '● Ready';
+                document.getElementById('status').className = 'status inactive';
+
+                sessionId = null;
+
+            } catch (error) {
+                console.error('Error stopping session:', error);
+                showMessage(`✗ Error: ${error.message}`, 'error');
+            }
+        }
+
+        // ========== Display Final Results ==========
+        function displayResults(summary) {
+            console.log('Session Summary:', summary);
+
+            // Update result display
+            document.getElementById('finalScore').textContent = Math.round(summary.attention_score) + '%';
+            document.getElementById('totalTime').textContent = summary.total_time.toFixed(1) + ' seconds';
+            document.getElementById('totalFrames').textContent = summary.frames_processed;
+            document.getElementById('distractedPeriods').textContent = summary.distracted_periods.length;
+
+            // Show results section
+            document.getElementById('results').classList.add('show');
+
+            // Plot graph
+            plotAttentionGraph(summary);
+        }
+
+        // ========== Plot Graph ==========
+        function plotAttentionGraph(summary) {
+            const ctx = document.getElementById('attentionChart').getContext('2d');
+
+            // Destroy existing chart if any
+            if (chartInstance) {
+                chartInstance.destroy();
+            }
+
+            chartInstance = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: summary.time_array.map(t => t.toFixed(1)),
+                    datasets: [
+                        {
+                            label: 'Eye Aspect Ratio (Attention)',
+                            data: summary.attention_array,
+                            borderColor: '#667eea',
+                            backgroundColor: 'rgba(102, 126, 234, 0.1)',
+                            borderWidth: 2,
+                            fill: true,
+                            tension: 0.4,
+                            pointRadius: 0,
+                            pointHoverRadius: 5
+                        },
+                        {
+                            label: 'Attention Status (1=Attentive, 0=Distracted)',
+                            data: summary.status_array.map(s => s === 'ATTENTIVE' ? 1 : 0),
+                            borderColor: '#f44336',
+                            backgroundColor: 'rgba(244, 67, 54, 0.1)',
+                            borderWidth: 2,
+                            borderDash: [5, 5],
+                            fill: false,
+                            tension: 0,
+                            pointRadius: 0
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    interaction: {
+                        intersect: false,
+                        mode: 'index'
+                    },
+                    plugins: {
+                        legend: {
+                            display: true,
+                            position: 'top'
+                        },
+                        title: {
+                            display: true,
+                            text: 'Attention Level Over Time'
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            max: 1,
+                            title: {
+                                display: true,
+                                text: 'Eye Aspect Ratio'
+                            }
+                        },
+                        x: {
+                            title: {
+                                display: true,
+                                text: 'Time (seconds)'
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        // ========== Initialize on Page Load ==========
+        window.addEventListener('load', () => {
+            console.log('Page loaded. API Base:', API_BASE);
+            showMessage('ℹ️ Ready to start. Click "Start Monitoring" to begin.', 'info');
+        });
+
+        // ========== Cleanup on Page Unload ==========
+        window.addEventListener('beforeunload', () => {
+            if (isMonitoring) {
+                stopSession();
+            }
+        });
+    </script>
+</body>
+</html>
