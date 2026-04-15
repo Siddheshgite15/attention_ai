@@ -10,9 +10,14 @@ import cv2
 from io import BytesIO
 from PIL import Image
 
-# ========== MediaPipe Setup ==========
-mp_face_mesh = mp.solutions.face_mesh
-face_mesh = mp_face_mesh.FaceMesh()
+try:
+    # Initialize MediaPipe Face Mesh
+    mp_face_mesh = mp.solutions.face_mesh
+    face_mesh = mp_face_mesh.FaceMesh()
+except AttributeError as e:
+    print(f"Error initializing MediaPipe: {e}")
+    print("MediaPipe might not be properly installed or has compatibility issues.")
+    raise
 
 LEFT_EYE = [33, 160, 158, 133, 153, 144]
 RIGHT_EYE = [362, 385, 387, 263, 373, 380]
